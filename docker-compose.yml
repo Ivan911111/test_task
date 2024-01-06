@@ -1,0 +1,63 @@
+services:
+    php:
+        build:
+            args:
+                user: ${DOCKER_USER}
+                uid: ${DOCKER_ID}
+                APP_DEBUG: ${APP_DEBUG}
+            context: ./
+            dockerfile: Dockerfile
+        image: laravel-php
+        container_name: ${DOCKER_CONTAINER_NAME}-php
+        environment:
+        - POSTGRES_HOST=${DB_HOST}
+        - POSTGRES_DB=${DB_DATABASE}
+        - POSTGRES_USER=${DB_USERNAME}
+        - POSTGRES_PASSWORD=${DB_PASSWORD}
+        restart: always
+        volumes:
+        - ./:/var/www/
+        ports:
+        - ${LARAVEL_PORT}:8080
+        networks:
+        - laravel
+    
+    redis:
+        image: redis:alpine3.18
+        container_name: ${DOCKER_CONTAINER_NAME}-redis
+        restart: always
+        networks:
+        - laravel
+        command: >
+            --requirepass ${REDIS_PASSWORD}
+
+    postgresql:
+        image: postgres:16.0-alpine3.18
+        container_name: ${DOCKER_CONTAINER_NAME}-postgres
+        restart: always
+        environment:
+            POSTGRES_DB: ${DB_DATABASE}
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
+            POSTGRES_USER: ${DB_USERNAME}
+            SERVICE_TAGS: dev
+            SERVICE_NAME: pgsql
+        volumes:
+        - postgres_laravel:/var/lib/postgresql/data
+        networks:
+        - laravel
+    adminer:
+        image: adminer
+        restart: always
+        ports:
+        - 8000:8080
+        depends_on:
+        - postgresql
+        networks:
+        - laravel
+
+volumes:
+    postgres_laravel:
+
+networks:
+    laravel:
+        driver: bridge
